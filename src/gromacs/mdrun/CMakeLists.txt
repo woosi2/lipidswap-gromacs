@@ -31,10 +31,13 @@
 # To help us fund GROMACS development, we humbly ask that you cite
 # the research papers on the package. Check out https://www.gromacs.org.
 
+# Modified 2026 for Lipid Swap MC; see src/gromacs/mdrun/lipidswap_mc.h.
+
 add_library(mdrun INTERFACE)
 gmx_add_libgromacs_sources(
     legacymdrunoptions.cpp
     legacysimulator.cpp
+    lipidswap_mc.cpp
     md.cpp
     mdmodules.cpp
     membedholder.cpp

@@ -31,6 +31,7 @@
  * To help us fund GROMACS development, we humbly ask that you cite
  * the research papers on the package. Check out https://www.gromacs.org.
  */
+/* Modified 2026 for Lipid Swap MC; see src/gromacs/mdrun/lipidswap_mc.h. */
 #include "gmxpre.h"
 
 #include "gromacs/mdtypes/inputrec.h"
@@ -1059,6 +1060,15 @@ void pr_inputrec(FILE* fp, int indent, const char* title, const t_inputrec* ir, 
             pr_simtempvals(fp, indent, ir->simtempvals.get(), ir->fepvals->n_lambda);
         }
 
+        /* LIPID SWAP MONTE CARLO */
+        PS("lipidswap-mc", EBOOL(ir->bLipidSwapMC));
+        if (ir->bLipidSwapMC)
+        {
+            PI("lipidswap-mc-nst", ir->nst_lipidswap);
+            PI("lipidswap-mc-nstep", ir->nstep_lipidswap);
+            PI("lipidswap-mc-seed", ir->ld_seed_lipidswap);
+        }
+
         /* ION/WATER SWAPPING FOR COMPUTATIONAL ELECTROPHYSIOLOGY */
         PS("swapcoords", enumValueToString(ir->eSwapCoords));
         if (ir->eSwapCoords != SwapType::No)
@@ -1574,6 +1584,10 @@ void cmp_inputrec(FILE* fp, const t_inputrec* ir1, const t_inputrec* ir2, real f
                         ftol,
                         abstol);
     }
+    cmp_int(fp, "inputrec->bLipidSwapMC", -1, static_cast<int>(ir1->bLipidSwapMC), static_cast<int>(ir2->bLipidSwapMC));
+    cmp_int(fp, "inputrec->nst_lipidswap", -1, ir1->nst_lipidswap, ir2->nst_lipidswap);
+    cmp_int(fp, "inputrec->nstep_lipidswap", -1, ir1->nstep_lipidswap, ir2->nstep_lipidswap);
+    cmp_int(fp, "inputrec->ld_seed_lipidswap", -1, ir1->ld_seed_lipidswap, ir2->ld_seed_lipidswap);
     cmp_int(fp, "inputrec->bExpanded", -1, static_cast<int>(ir1->bExpanded), static_cast<int>(ir2->bExpanded));
     if ((ir1->bExpanded == ir2->bExpanded) && (ir1->bExpanded))
     {

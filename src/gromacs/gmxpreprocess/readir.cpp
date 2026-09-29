@@ -31,6 +31,7 @@
  * To help us fund GROMACS development, we humbly ask that you cite
  * the research papers on the package. Check out https://www.gromacs.org.
  */
+/* Modified 2026 for Lipid Swap MC; see src/gromacs/mdrun/lipidswap_mc.h. */
 #include "gmxpre.h"
 
 #include "readir.h"
@@ -2711,6 +2712,32 @@ void get_ir(const char*     mdparin,
     ir->cos_accel = get_ereal(&inp, "cos-acceleration", 0, wi);
     setStringEntry(&inp, "deform", inputrecStrings->deform, nullptr);
     opts->deformInitFlow = (getEnum<Boolean>(&inp, "deform-init-flow", wi) != Boolean::No);
+
+    /* Lipid Swap Monte Carlo variables */
+    printStringNewline(&inp, "lipid swap Monte Carlo variables");
+    ir->bLipidSwapMC      = (getEnum<Boolean>(&inp, "lipidswap-mc", wi) != Boolean::No);
+    ir->nst_lipidswap     = get_eint(&inp, "lipidswap-mc-nst", 1000, wi);
+    ir->nstep_lipidswap   = get_eint(&inp, "lipidswap-mc-nstep", 1000, wi);
+    ir->ld_seed_lipidswap = get_eint(&inp, "lipidswap-mc-seed", -1, wi);
+    if (ir->bLipidSwapMC)
+    {
+        if (ir->eI != IntegrationAlgorithm::MD && ir->eI != IntegrationAlgorithm::SD1)
+        {
+            wi->addError("lipidswap-mc is only implemented for integrator md and sd");
+        }
+        if (ir->nst_lipidswap <= 0 || ir->nstep_lipidswap <= 0)
+        {
+            wi->addError("lipidswap-mc-nst and lipidswap-mc-nstep should be larger than 0");
+        }
+        else if (ir->nst_lipidswap % 400 != 0)
+        {
+            wi->addNote(gmx::formatString(
+                    "mdrun requires lipidswap-mc-nst (%d) to be a multiple of the nstlist used "
+                    "at run time. mdrun may increase nstlist to 20, 25, 40, 50, 80 or 100; a "
+                    "multiple of 400 is safe for all of them.",
+                    ir->nst_lipidswap));
+        }
+    }
 
     /* simulated tempering variables */
     printStringNewline(&inp, "simulated tempering variables");

@@ -31,6 +31,7 @@
  * To help us fund GROMACS development, we humbly ask that you cite
  * the research papers on the package. Check out https://www.gromacs.org.
  */
+/* Modified 2026 for Lipid Swap MC; see src/gromacs/mdrun/lipidswap_mc.h. */
 /*! \internal \file
  *
  * \brief Implements the integrator for normal molecular dynamics simulations
@@ -54,6 +55,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "lipidswap_mc.h"
 
 #include "gromacs/applied_forces/awh/awh.h"
 #include "gromacs/applied_forces/awh/read_params.h"
@@ -647,6 +650,33 @@ void gmx::LegacySimulator::do_md()
 
     int64_t step     = ir->init_step;
     int64_t step_rel = 0;
+
+    // Lipid Swap Monte Carlo (DPPC <-> DIPC).
+    // Constructed once here so its swap.log handle and residue lookup persist.
+    // The constructor reads the lipidswap-mc settings and the temperature from
+    // ir and stops mdrun if the run setup is not supported.
+    std::unique_ptr<LipidSwapMC> lipidSwapMc;
+    if (ir->bLipidSwapMC)
+    {
+        lipidSwapMc = std::make_unique<LipidSwapMC>(fpLog_,
+                                                    cr_,
+                                                    ir,
+                                                    mdModulesNotifiers_,
+                                                    mdAtoms_,
+                                                    nrnb_,
+                                                    fr_,
+                                                    wallCycleCounters_,
+                                                    runScheduleWork_,
+                                                    virtualSites_,
+                                                    imdSession_,
+                                                    pullWork_,
+                                                    enforcedRotation_,
+                                                    topGlobal_,
+                                                    top_,
+                                                    state_,
+                                                    enerd_,
+                                                    &f);
+    }
 
     /* To minimize communication, compute_globals computes the COM velocity
      * and the kinetic energy for the velocities without COM motion removed.
@@ -2135,6 +2165,16 @@ void gmx::LegacySimulator::do_md()
             rescale_membed(step_rel, membed_, as_rvec_array(stateGlobal_->x.data()));
         }
 
+        // Lipid Swap MC: invoked at the very end of the MD step, after the
+        // integrator, constraints and pressure coupling have completed. The MD
+        // pipeline above is therefore unmodified.  Virtual sites were
+        // constructed at the TOP of this step and so lag the post-update
+        // coordinates; apply() refreshes them before evaluating any swap.
+        if (lipidSwapMc && lipidSwapMc->shouldRun(step))
+        {
+            lipidSwapMc->apply(step, t);
+        }
+
         const double cycles = wallcycle_stop(wallCycleCounters_, WallCycleCounter::Step);
         if (haveDDAtomOrdering(*cr_) && wallCycleCounters_)
         {
@@ -2215,6 +2255,11 @@ void gmx::LegacySimulator::do_md()
     }
 
     walltime_accounting_set_nsteps_done(wallTimeAccounting_, step_rel);
+
+    if (lipidSwapMc)
+    {
+        lipidSwapMc->writeSummary();
+    }
 
     global_stat_destroy(gstat);
 }

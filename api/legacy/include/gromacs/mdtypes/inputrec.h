@@ -31,6 +31,7 @@
  * To help us fund GROMACS development, we humbly ask that you cite
  * the research papers on the package. Check out https://www.gromacs.org.
  */
+/* Modified 2026 for Lipid Swap MC; see src/gromacs/mdrun/lipidswap_mc.h. */
 #ifndef GMX_MDTYPES_INPUTREC_H
 #define GMX_MDTYPES_INPUTREC_H
 
@@ -509,6 +510,14 @@ struct t_inputrec // NOLINT (clang-analyzer-optin.performance.Padding)
     bool bExpanded = false;
     //! Expanded ensemble parameters
     std::unique_ptr<t_expanded> expandedvals;
+    //! Whether to do Lipid Swap Monte Carlo
+    bool bLipidSwapMC = false;
+    //! Frequency of lipid swap MC block (every N MD steps)
+    int nst_lipidswap = 1000;
+    //! Number of MC swap moves per MC block
+    int nstep_lipidswap = 1000;
+    //! Random seed for lipid swap MC (negative => random_device)
+    int ld_seed_lipidswap = -1;
     //! Type of distance restraining
     DistanceRestraintRefinement eDisre = DistanceRestraintRefinement::Default;
     //! Force constant for time averaged distance restraints

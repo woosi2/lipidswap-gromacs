@@ -31,6 +31,7 @@
  * To help us fund GROMACS development, we humbly ask that you cite
  * the research papers on the package. Check out https://www.gromacs.org.
  */
+/* Modified 2026 for Lipid Swap MC; see src/gromacs/mdrun/lipidswap_mc.h. */
 /*! \internal \file
  * \brief Defines the modular simulator
  *
@@ -418,6 +419,10 @@ bool ModularSimulator::isInputCompatible(bool                             exitOn
     isInputCompatible =
             isInputCompatible
             && conditionalAssert(!doRerun, "Rerun is not supported by the modular simulator.");
+    isInputCompatible = isInputCompatible
+                        && conditionalAssert(!inputrec->bLipidSwapMC,
+                                             "Lipid swap MC is not supported by the modular "
+                                             "simulator.");
     isInputCompatible =
             isInputCompatible
             && conditionalAssert(!inputrec->useConstantAcceleration && inputrec->cos_accel == 0.0,

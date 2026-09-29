@@ -31,6 +31,7 @@
  * To help us fund GROMACS development, we humbly ask that you cite
  * the research papers on the package. Check out https://www.gromacs.org.
  */
+/* Modified 2026 for Lipid Swap MC; see src/gromacs/mdrun/lipidswap_mc.h. */
 #include "gmxpre.h"
 
 #include "gromacs/math/vectypes.h"
@@ -110,7 +111,7 @@
  * merging with mainstream GROMACS, set this tag string back to
  * TPX_TAG_RELEASE, and instead add an element to tpxv.
  */
-static const std::string tpx_tag = TPX_TAG_RELEASE;
+static const std::string tpx_tag = "lipidswap";
 
 /*! \brief Enum of values that describe the contents of a tpr file
  * whose format matches a version number
@@ -200,6 +201,8 @@ enum tpxv
     tpxv_RefScaleMultipleCOMs, /**< Add multiple COM groups for refcoord-scale */
     tpxv_InputHistogramCounts, /**< Provide input histogram counts for current expanded ensemble state */
     tpxv_NNPotIFuncType,       /**< Add interaction function type for neural network potential */
+    tpxv_LipidSwapMC,          /**< Add Lipid Swap Monte Carlo (DPPC<->DIPC) parameters */
+    tpxv_LipidSwapMCSeed,      /**< Add Lipid Swap MC random seed parameter */
     tpxv_Count                 /**< the total number of tpxv versions */
 };
 
@@ -1505,6 +1508,28 @@ static void do_inputrec(gmx::ISerializer* serializer, t_inputrec* ir, int file_v
             ir->expandedvals = std::make_unique<t_expanded>();
         }
         do_expandedvals(serializer, ir->expandedvals.get(), ir->fepvals.get(), file_version);
+    }
+
+    if (file_version >= tpxv_LipidSwapMC)
+    {
+        serializer->doBool(&ir->bLipidSwapMC);
+        serializer->doInt(&ir->nst_lipidswap);
+        serializer->doInt(&ir->nstep_lipidswap);
+    }
+    else if (serializer->reading())
+    {
+        ir->bLipidSwapMC    = false;
+        ir->nst_lipidswap   = 1000;
+        ir->nstep_lipidswap = 1000;
+    }
+
+    if (file_version >= tpxv_LipidSwapMCSeed)
+    {
+        serializer->doInt(&ir->ld_seed_lipidswap);
+    }
+    else if (serializer->reading())
+    {
+        ir->ld_seed_lipidswap = -1;
     }
 
     serializer->doEnumAsInt(&ir->eDisre);
